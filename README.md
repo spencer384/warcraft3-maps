@@ -9,15 +9,17 @@
 ## 📁 目錄結構
 
 ```text
-├── maps/                               # 地圖二進位檔 (.w3x / .w3m)
-│   ├── Stromguarde-Gemini_enhanced.w3m # 原版平衡對照圖
-│   ├── Stromguarde-Rifel_fast_V3.w3x   # 步槍兵特化 V3
-│   └── Stromguarde-Rifel_fast_V4.w3x   # 步槍兵特化 V4 (推薦最新版)
-├── src/                                # 核心 AI 原始碼與腳本
+├── maps/                                   # 地圖二進位檔 (.w3x / .w3m)
+│   ├── Stromguarde-Gemini_enhanced_V2.w3m  # 反塔防與繞後戰術引擎完整注入版 (推薦)
+│   ├── Stromguarde-Gemini_enhanced.w3m     # 原版對照基準圖
+│   ├── Stromguarde-Rifel_fast_V4.w3x       # 步槍兵特化 V4 (推薦)
+│   └── Stromguarde-Rifel_fast_V3.w3x       # 步槍兵特化 V3
+├── src/                                    # 核心 AI 與戰術引擎原始碼
 │   └── Scripts/
-│       └── human.ai                    # 人類專屬步槍兵特化 AI 腳本
-├── docs/                               # 詳細改版履歷與地圖說明
-│   └── changelog.md                    # 各地圖版本完整說明與修改紀錄
+│       ├── AMAI_AntiTower_Tactics.j        # 反塔防偵測、火砲拉扯、空軍側翼繞後 JASS 引擎
+│       └── human.ai                        # 人類專屬步槍兵特化對戰 AI 腳本
+├── docs/                                   # 詳細改版履歷與地圖說明
+│   └── changelog.md                        # 各地圖版本完整說明與修改紀錄
 └── README.md
 ```
 
@@ -29,25 +31,24 @@
 
 | 地圖檔名 | 遊戲內名稱 | 系列分類 | 核心特色 |
 | :--- | :--- | :---: | :--- |
+| **`Stromguarde-Gemini_enhanced_V2.w3m`** | `Stromguarde-Gemini_enhanced_V2.w3m` | 反塔防與繞後突襲 (最新) | 完整注入原生 JASS 戰術引擎：2.5 秒掃描敵營塔陣、攻城火砲 750~1150 碼拉扯、空軍避開正門塔網繞後偷襲農民。 |
 | **`Stromguarde-Rifel_fast_V4.w3x`** | `Stromguarde-Rifel_fast_V4.w3x` | 步槍兵特化 (最新) | 射程 1000~1300、攻速 0.3s、防卡人口、雙兵營順序優化、24 小時攻城推進。 |
-| **`Stromguarde-Rifel_fast_V3.w3x`** | `Stromguarde-Rifel_fast_V3.w3x` | 步槍兵特化 (歷史) | 首次內嵌自訂 `human.ai`，速出步槍兵與一本長步槍科技。 |
-| **`Stromguarde-Gemini_enhanced.w3m`** | `Stromguarde-Gemini enhanced` | 原版對照平衡圖 | 維持暴雪官方原版兵種數值與科技樹，作為特化版本之對照基準。 |
+| **`Stromguarde-Gemini_enhanced.w3m`** | `Stromguarde-Gemini enhanced` | 歷史對照圖 | 暴雪官方原版兵種數值對照基準圖。 |
+| **`Stromguarde-Rifel_fast_V3.w3x`** | `Stromguarde-Rifel_fast_V3.w3x` | 歷史特化圖 | 首次內嵌自訂 `human.ai`，速出步槍兵與一本長步槍科技。 |
 
 ---
 
-## ⚙️ 步槍兵特化數值總覽（相較於原版 Gemini enhanced）
+## 🧠 核心技術亮點
 
-* **射程與索敵**：基礎攻擊距離 `1000`（原版 400），主動索敵範圍 `1150`。
-* **攻速與手感**：攻擊冷卻僅 `0.3 秒`（原版 1.35 秒），出手前搖 `0.05 秒`，後搖 `0.10 秒`，彈道速度 `3000`。
-* **生存與科技**：基礎防禦提升為 `3`。長步槍升級無需二本主城，升級後射程達 **`1300`**，攻速再提升 **`+20%`**。
+### 1. 反塔防與空軍側翼繞後引擎（`AMAI_AntiTower_Tactics.j`）
+* **動態塔防雷達**：每 2.5 秒輪詢敵方玩家建築，若防禦塔數量 `>= 3` 立即觸發防龜縮模式。
+* **攻城武器射程維護**：強制攻城單位在 750~1150 碼極限距離開火，優先破壞防禦塔。
+* **側翼向量路徑運算**：空軍部隊不再無腦衝正面塔陣送死，而是偏移 2400 碼計算側翼路徑繞至後排獵殺採集農民。
 
----
-
-## 🤖 專屬 AI 戰術亮點（`human.ai`）
-
-1. **速科技與速兵營**：開局 2 步兵後直衝鐵匠鋪與雙兵營，迅速集結 8～14 隻步槍兵大軍。
-2. **24 小時全天候推進**：步槍兵達 8 隻時解鎖攻城權限，徹底打破常規 AI 只能在上午攻城的消極模式。
-3. **戰略防卡機制**：全自動補充人口，英雄陣亡期間部隊依然保持陣形積極推進。
+### 2. 步槍兵極限特化與進攻 AI（`human.ai`）
+* **極限射擊屬性**：射程 1000~1300、攻速 0.3s、前搖 0.05s、彈道 3000。
+* **開局科技特化**：一本鐵匠鋪直升長步槍，雙兵營迅速擴編 8~14 隻步槍兵。
+* **全天候進攻機制**：消除原版 AI 僅在白天攻城的限制，兵力達標即展開 24 小時連續壓制。
 
 ---
 
