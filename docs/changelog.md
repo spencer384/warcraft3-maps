@@ -7,7 +7,7 @@
 ## 🗺️ 地圖系列分類
 
 目前專案收錄兩大核心戰術地圖系列：
-1. **Stromguarde-Gemini_enhanced 系列**（原生 JASS 反塔防龜縮偵測、空軍側翼繞後突襲戰術引擎）
+1. **Stromguarde-Gemini_enhanced 系列**（原生 JASS 反塔防龜縮偵測、攻城行軍拉扯、空軍側翼繞後突襲戰術引擎）
 2. **Stromguarde-Rifel_fast 系列**（人類步槍兵數值與 AI 極限特化對戰圖）
 
 ---
@@ -15,17 +15,22 @@
 ## 📌 系列一：Stromguarde-Gemini_enhanced 系列
 
 - **地圖檔案**：
-  - `maps/Stromguarde-Gemini_enhanced_V2.w3m`（**反塔防與繞後突襲 JASS 引擎完整注入版**，推薦）
+  - `maps/Stromguarde-Gemini_enhanced_V3.w3m`（**攻城防卡死與基地出征優化版**，推薦）
+  - `maps/Stromguarde-Gemini_enhanced_V2.w3m`（JASS 語法修正版）
   - `maps/Stromguarde-Gemini_enhanced.w3m`（初代對照基準圖）
 - **遊戲內名稱**：與檔名一致
 - **地圖類型**：經典 6 人對戰圖 (`.w3m` 混亂之治/寒冰霸權相容格式)
 - **核心戰術機制**：
   1. **動態塔防龜縮偵測 (`ScanPlayerTowerDefense`)**：
-     - JASS 底層計時器每 2.5 秒定期掃描各敵對玩家基地箭塔密度。
+     - JASS 底層計時器定期掃描各敵對玩家基地箭塔密度。
      - 若敵方箭塔數超過門檻（`TOWER_THRESHOLD = 3`），標記其為龜縮狀態。
-  2. **攻城武器距離微控 (`Siege Micro`)**：
-     - 偵測到箭塔群時，強制攻城部隊（迫擊砲、投石車、絞肉車等）維持在 **750 ~ 1150 碼** 安全射程邊緣，優先集中火力點殺防禦塔，避免近戰部隊送死。
-  3. **空軍側翼繞後突襲 (`ExecuteAirFlankTactics`)**：
+  2. **攻城數量動態控管（V3 防卡死核心）**：
+     - 加入 `MAX_SIEGE_UNITS = 2` 嚴格限制，徹底消除電腦因過度生產大型攻城車（投石車/絞肉車）導致擠死在建築群狹縫動彈不得的問題。
+  3. **基地出征推進引導 (`Siege March`)**：
+     - 攻城車在自家基地附近（周圍無敵方防禦塔時）不再原地踱步發呆，而是強制下達主動推進指令，引導其離開基地開赴前線。
+  4. **攻城武器距離微控 (`Siege Micro`)**：
+     - 抵達前線且偵測到箭塔群時，強制攻城部隊維持在 **750 ~ 1150 碼** 安全射程邊緣定點點殺防禦塔。
+  5. **空軍側翼繞後突襲 (`ExecuteAirFlankTactics`)**：
      - 當前門被大量箭塔封鎖時，戰術引擎動態計算側翼迂迴座標（`flankX, flankY`，偏移 2400 碼路徑點）。
      - 強制命令空軍部隊繞開正門重防，直接切入後方金礦農民採集點進行精準屠殺。
 
@@ -57,7 +62,8 @@
 
 ```text
 maps/
-├── Stromguarde-Gemini_enhanced_V2.w3m # 反塔防與繞後戰術引擎完整注入版 (推薦)
+├── Stromguarde-Gemini_enhanced_V3.w3m # 攻城防卡死與基地出征優化版 (推薦)
+├── Stromguarde-Gemini_enhanced_V2.w3m # JASS 語法修正版
 ├── Stromguarde-Gemini_enhanced.w3m    # 初版對照圖
 ├── Stromguarde-Rifel_fast_V4.w3x      # 步槍兵特化最新版：防卡兵與防消極進攻完善版 (推薦)
 └── Stromguarde-Rifel_fast_V3.w3x      # 步槍兵特化初代 AI 整合圖
@@ -65,14 +71,22 @@ maps/
 
 ---
 
-### 🔹 [Stromguarde-Gemini_enhanced_V2.w3m](file:///C:/Users/readb/.gemini/antigravity/scratch/warcraft3-maps/maps/Stromguarde-Gemini_enhanced_V2.w3m)（推薦最新版）
+### 🔹 [Stromguarde-Gemini_enhanced_V3.w3m](file:///C:/Users/readb/.gemini/antigravity/scratch/warcraft3-maps/maps/Stromguarde-Gemini_enhanced_V3.w3m)（推薦最新版）
+
+* **地圖檔案路徑**：`maps/Stromguarde-Gemini_enhanced_V3.w3m`
+* **遊戲內顯示名稱**：`Stromguarde-Gemini_enhanced_V3.w3m`
+* **改版重點**：
+  1. **限制攻城武器上限（MAX 2）**：防範 AI 因偵測到塔防而無止境生產大型投石車/絞肉車，徹底根治基地周遭被大型車輛擠塞卡死的致命問題。
+  2. **加入出征推進引導**：攻城車在自家基地附近且周遭無敵塔時，強制發出推進攻擊指令，杜絕在基地內踱步發呆。
+  3. **限制空軍突襲上限（MAX 4）**：平衡資源分配，保留充足金木給核心陸戰部隊與英雄維護。
+
+---
+
+### 🔹 [Stromguarde-Gemini_enhanced_V2.w3m](file:///C:/Users/readb/.gemini/antigravity/scratch/warcraft3-maps/maps/Stromguarde-Gemini_enhanced_V2.w3m)
 
 * **地圖檔案路徑**：`maps/Stromguarde-Gemini_enhanced_V2.w3m`
 * **遊戲內顯示名稱**：`Stromguarde-Gemini_enhanced_V2.w3m`
-* **改版重點**：
-  1. **補齊底層戰術腳本**：解決 V1 僅說明標籤有寫但 `war3map.j` 遺漏代碼的問題，正式完整注入 `AMAI_AntiTower_Tactics.j`。
-  2. **主動防禦塔雷達**：每 2.5 秒掃描敵營塔陣，超過 3 座防禦塔自動觸發應對反制。
-  3. **智慧繞後路徑點運算**：空軍避開正面火網，走側翼偷襲金礦與農民。
+* **改版重點**：修正多重 `globals` 區塊導致的地圖載入語法錯誤。
 
 ---
 
@@ -80,20 +94,4 @@ maps/
 
 * **地圖檔案路徑**：`maps/Stromguarde-Rifel_fast_V4.w3x`
 * **遊戲內顯示名稱**：`Stromguarde-Rifel_fast_V4.w3x`
-* **改版重點**：
-  1. **名稱全域同步**：實體檔名、HM3W 檔頭資訊與 `war3map.wts` 全面統一名稱為 `Stromguarde-Rifel_fast_V4.w3x`。
-  2. **修復開局人口卡死**：加入動態農場補充機制（`c_food_used + 5 >= c_food_made`），防止因 54 人口上限而卡住第 2 英雄生產。
-  3. **兵營與分礦順序優化**：先集結 6 步槍兵並完成雙兵營、8 步槍兵與皮甲升級後才執行開礦，避免拖慢戰力。
-  4. **排除消極進攻機制（24 小時推進）**：部隊滿 8 隻步槍兵時取得全天候攻城權限，打破原版 AI 僅在白天（04:00～12:00）進攻的缺陷。
-  5. **解除英雄陣亡發呆阻塞**：場上有 8 隻以上步槍兵時，英雄陣亡復活期間部隊依然保持陣形主動進攻，不再原地待命。
-
----
-
-### 🔹 [Stromguarde-Rifel_fast_V3.w3x](file:///C:/Users/readb/.gemini/antigravity/scratch/warcraft3-maps/maps/Stromguarde-Rifel_fast_V3.w3x)
-
-* **地圖檔案路徑**：`maps/Stromguarde-Rifel_fast_V3.w3x`
-* **遊戲內顯示名稱**：`Stromguarde-Rifel_fast_V3.w3x`
-* **改版重點**：
-  1. **內嵌自訂 `Scripts\human.ai`**：解決電腦延遲至三本城堡才升級長步槍的問題。
-  2. **速出步槍兵體系**：開局步兵減至 2 隻，主力資源轉向步槍兵。
-  3. **戰力門檻調整**：1 英雄搭配 3 步槍兵即展開首波主動出擊。
+* **改版重點**：實體檔名與遊戲內名稱完全同步、修復開局人口卡死、優化雙兵營順序、步槍兵滿 8 隻解除 24 小時攻城限制與英雄陣亡發呆阻塞。

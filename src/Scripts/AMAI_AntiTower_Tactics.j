@@ -1,16 +1,18 @@
 //==============================================================================
-// AMAI Anti-Tower & Air Flank Tactics Enhancer (Pure Native JASS)
+// AMAI Anti-Tower & Air Flank Tactics Enhancer (Pure Native JASS) - V3 Refined
 // Target: Warcraft III (ROC / TFT / Reforged)
 // Features:
 //   1. Dynamic scan of enemy base tower density
-//   2. Automatic reinforcement: trains Siege & Air units when turtling detected
-//   3. Siege Micro: maintains 750-1150 safe range, priority destroys towers
+//   2. Controlled reinforcement: max 2-3 siege units, prevents base crowding
+//   3. Siege March & Micro: moves toward target, kites when towers are in range
 //   4. Air Strike Micro: side-flank pathing to bypass entrance, raids backline workers
 //==============================================================================
 
 globals
-    constant real    TACTICS_UPDATE_INTERVAL = 2.50
+    constant real    TACTICS_UPDATE_INTERVAL = 3.00
     constant integer TOWER_THRESHOLD         = 3
+    constant integer MAX_SIEGE_UNITS         = 2
+    constant integer MAX_AIR_STRIKE_UNITS    = 4
     
     boolean array    g_PlayerIsTurtling
     timer            g_TacticsTimer
@@ -76,6 +78,29 @@ function IsUnitAirStrike takes unit u returns boolean
     return false
 endfunction
 
+function CountPlayerUnitsOfType takes player p, integer category returns integer
+    local group g = CreateGroup()
+    local unit u = null
+    local integer count = 0
+    
+    call GroupEnumUnitsOfPlayer(g, p, null)
+    loop
+        set u = FirstOfGroup(g)
+        exitwhen u == null
+        if IsTargetAlive(u) then
+            if category == 1 and IsUnitSiegeWeapon(u) then
+                set count = count + 1
+            elseif category == 2 and IsUnitAirStrike(u) then
+                set count = count + 1
+            endif
+        endif
+        call GroupRemoveUnit(g, u)
+    endloop
+    call DestroyGroup(g)
+    set g = null
+    return count
+endfunction
+
 function ScanPlayerTowerDefense takes player targetPlayer returns boolean
     local group g = CreateGroup()
     local unit u = null
@@ -99,18 +124,30 @@ function ScanPlayerTowerDefense takes player targetPlayer returns boolean
 endfunction
 
 function ReinforceAntiTowerUnits takes player aiPlayer returns nothing
-    local group bGroup = CreateGroup()
+    local group bGroup = null
     local unit b = null
     local integer bId = 0
     local integer gold = GetPlayerState(aiPlayer, PLAYER_STATE_RESOURCE_GOLD)
     local integer wood = GetPlayerState(aiPlayer, PLAYER_STATE_RESOURCE_LUMBER)
+    local integer siegeCount = 0
+    local integer airCount = 0
+    local boolean canTrainSiege = false
+    local boolean canTrainAir = false
     
-    if gold < 250 or wood < 100 then
-        call DestroyGroup(bGroup)
-        set bGroup = null
+    if gold < 300 or wood < 150 then
         return
     endif
     
+    set siegeCount = CountPlayerUnitsOfType(aiPlayer, 1)
+    set airCount = CountPlayerUnitsOfType(aiPlayer, 2)
+    set canTrainSiege = (siegeCount < MAX_SIEGE_UNITS)
+    set canTrainAir = (airCount < MAX_AIR_STRIKE_UNITS)
+    
+    if (not canTrainSiege) and (not canTrainAir) then
+        return
+    endif
+    
+    set bGroup = CreateGroup()
     call GroupEnumUnitsOfPlayer(bGroup, aiPlayer, null)
     loop
         set b = FirstOfGroup(bGroup)
@@ -118,25 +155,25 @@ function ReinforceAntiTowerUnits takes player aiPlayer returns nothing
         if IsTargetAlive(b) and IsUnitType(b, UNIT_TYPE_STRUCTURE) then
             set bId = GetUnitTypeId(b)
             // Human Workshop -> Train Mortar
-            if bId == 'harm' then
+            if bId == 'harm' and canTrainSiege then
                 call IssueImmediateOrderById(b, 'hmtm')
             // Human Aviary -> Train Gryphon
-            elseif bId == 'hgra' then
+            elseif bId == 'hgra' and canTrainAir then
                 call IssueImmediateOrderById(b, 'hgry')
             // Orc Barracks -> Train Catapult
-            elseif bId == 'obar' then
+            elseif bId == 'obar' and canTrainSiege then
                 call IssueImmediateOrderById(b, 'ocat')
             // Orc Beastiary -> Train Wind Rider
-            elseif bId == 'obea' then
+            elseif bId == 'obea' and canTrainAir then
                 call IssueImmediateOrderById(b, 'owyv')
             // Undead Slaughterhouse -> Train Meat Wagon
-            elseif bId == 'uslh' then
+            elseif bId == 'uslh' and canTrainSiege then
                 call IssueImmediateOrderById(b, 'umtw')
             // Undead Crypt -> Train Gargoyle
-            elseif bId == 'usep' then
+            elseif bId == 'usep' and canTrainAir then
                 call IssueImmediateOrderById(b, 'ugar')
             // Night Elf Ancient of War -> Train Glaive Thrower
-            elseif bId == 'eaow' then
+            elseif bId == 'eaow' and canTrainSiege then
                 call IssueImmediateOrderById(b, 'ebal')
             endif
         endif
@@ -158,6 +195,11 @@ function ExecuteSiegeTactics takes player aiPlayer, player targetPlayer returns 
     local real sy = 0.0
     local real tx = 0.0
     local real ty = 0.0
+    local real bx = GetPlayerStartLocationX(targetPlayer)
+    local real by = GetPlayerStartLocationY(targetPlayer)
+    local real ax = GetPlayerStartLocationX(aiPlayer)
+    local real ay = GetPlayerStartLocationY(aiPlayer)
+    local real distToBase = 0.0
     
     call GroupEnumUnitsOfPlayer(g, aiPlayer, null)
     
@@ -171,6 +213,7 @@ function ExecuteSiegeTactics takes player aiPlayer, player targetPlayer returns 
             set targetTower = null
             set minDistance = 99999.0
             
+            // Search for towers in combat range
             call GroupEnumUnitsInRange(enemyTowers, sx, sy, 1400.0, null)
             loop
                 set tempUnit = FirstOfGroup(enemyTowers)
@@ -186,14 +229,20 @@ function ExecuteSiegeTactics takes player aiPlayer, player targetPlayer returns 
             endloop
             
             if targetTower != null then
-                // If within 700 range of tower, retreat to safe distance
+                // If dangerously close to tower (< 700), kite backwards
                 if minDistance < 700.0 then
                     set tx = sx - (GetUnitX(targetTower) - sx) * 0.5
                     set ty = sy - (GetUnitY(targetTower) - sy) * 0.5
                     call IssuePointOrder(siegeUnit, "move", tx, ty)
                 else
-                    // Safely snipe tower from max range
+                    // Safely snipe tower from safe max range
                     call IssueTargetOrder(siegeUnit, "attack", targetTower)
+                endif
+            else
+                // No towers in range: If near own base, march toward enemy base instead of idling
+                set distToBase = SquareRoot((sx - ax) * (sx - ax) + (sy - ay) * (sy - ay))
+                if distToBase < 2200.0 then
+                    call IssuePointOrder(siegeUnit, "attack", bx, by)
                 endif
             endif
         endif
@@ -295,9 +344,9 @@ function TacticsTimerCallback takes nothing returns nothing
                     set g_PlayerIsTurtling[j] = ScanPlayerTowerDefense(pEnemy)
                     
                     if g_PlayerIsTurtling[j] then
-                        // 1. Order AI production buildings to reinforce siege and air
+                        // 1. Order AI production buildings to reinforce siege and air (controlled)
                         call ReinforceAntiTowerUnits(pAI)
-                        // 2. Micro siege weapons to kite and focus towers
+                        // 2. Micro siege weapons to kite and focus towers, or march to front
                         call ExecuteSiegeTactics(pAI, pEnemy)
                         // 3. Order air units to flank around front entrance and strike backline
                         call ExecuteAirFlankTactics(pAI, pEnemy)
